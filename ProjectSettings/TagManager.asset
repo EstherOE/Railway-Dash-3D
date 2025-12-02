@@ -9,6 +9,8 @@ TagManager:
   - Boss
   - PowerUp
   - Coins
+  - leftLand
+  - rightLan
   layers:
   - Default
   - TransparentFX
