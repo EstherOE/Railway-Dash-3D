@@ -33,29 +33,29 @@ public class EndlessTrainController : MonoBehaviour
 	[Header("Land Decorations")]
 	public Transform landleftT;
 	public Transform landRightT;
-	[Header("City ")]
 	public GameObject[] smallBuildings;
 	public GameObject[]biigBuildings;
-	[Header("Forest")]
 	public GameObject []trees;
-	[Header("Mountains")]
 	public GameObject[] rocks;
 	
 	public GameObject[] mountains;
-	[Header("Wagons")]
-	public GameObject[]wagons;
-	[Header("Horses")]
+	public GameObject[]wagons;	
 	public GameObject [] horses;
 	
-	[Header("Desert")]
 	public GameObject [] catcus;
-	public Transform decoeLeft;
-	public Transform decoright;
+	[Header("DecorLocation")]
+	public Transform startLeft;
+	public Transform endLeft;
+	public Transform startRight;
+	public Transform endRight;
 	public int minDecorCount=4;
 	public int maxDecorCount=10;
 	public float decoOffset=0.5f;
 	public Vector2 ScaleRange=new Vector2(0.8f,1.4f);
+	public float num=2f;
 	public biomeType biome= biomeType.Forest;
+	public float minSpacing=4f;
+	
 	public enum biomeType{
 		Forest,
 		Desert,
@@ -71,6 +71,7 @@ public class EndlessTrainController : MonoBehaviour
 	public float horsescale=3.0f;
 	public float cityscale=1.7f;
 	public float mountainScale=1f;
+	private List<Vector3>placedPos= new List<Vector3>();
 	#endregion
 	
 	#region Obstacles & PowerUps  Settings
@@ -182,18 +183,38 @@ public class EndlessTrainController : MonoBehaviour
 		
 	}
 	void SpawnDecorations(Transform parent ,int side){
-		int decorCount=  Random.Range(minDecorCount,maxDecorCount);
+		int decorCount=  Random.Range(minDecorCount,maxDecorCount+1);
+
+		Transform startT= (side==-1)? startLeft: startRight;
+		Transform endT=(side==-1)? endLeft: endRight;
 		for (int i = 0; i < decorCount; i++) {
 			GameObject prefab= ChooseRandomDeccor();
 			if(prefab==null) continue;
-			bool spawnLef= (Random.value>0.5f);
-			float randomz= Random.Range(3,chunkLenght-6);
-			Transform baseSpawn= spawnLef ? decoeLeft:decoright;
-			float offset=Random.Range(2, 6);
-			Vector3 pos= new Vector3(parent.position.x+offset,0, parent.position.z+randomz);
+			Vector3  hosePos= Vector3.zero;
+			bool foundValid=false;
+			for(int atte=0 ;atte<10; atte++)
+			{
+			float randomZ= Random.Range(startT.position.z, endT.position.z);
+			float randomx= Random.Range(startT.position.x, endT.position.x);
+				Vector3 testPos= new Vector3(randomx,0, randomZ);
+				if(IsPostion(testPos))
+				{
+					hosePos= testPos;
+					foundValid= true;
+					break;
+				}
+				else{
+					hosePos= testPos;
+				}
+		
+			}
+			if(!foundValid )
 			
-			GameObject obj= Instantiate(prefab, pos,Quaternion.identity,parent);
+				continue;
+			
+			placedPos.Add(hosePos);
 			float scale= Random.Range(ScaleRange.x,ScaleRange.y);
+			GameObject obj= Instantiate(prefab,hosePos,Quaternion.identity,parent);
 			switch(biome)
 			{
 			case biomeType.Forest:
@@ -221,9 +242,20 @@ public class EndlessTrainController : MonoBehaviour
 	
 		}
 	}
+	bool IsPostion(Vector3 pos)
+	{
+		foreach (var p in placedPos)
+	{
+			if (Vector3.Distance(p, pos) < minSpacing)
+			return false;
+	}
+		return true;
+	
+	
+  }
 	void ClearChildren(Transform parent)
 	{
-		for (int i = 0; i < parent.childCount; i++) {
+		for (int i = parent.childCount-1 ;i >=0; i--) {
 			
 			Destroy(parent.GetChild(i).gameObject);
 		}
@@ -244,28 +276,48 @@ public class EndlessTrainController : MonoBehaviour
 			return group[Random.Range(0, group.Length)];
 		}
 	GameObject ChooseRandomDeccor(){
-		
+		GameObject prefab=null;
 		switch(biome)
 		{
 		case biomeType.Forest:
-			return ChooseFrom(trees);
-		case biomeType.Desert:
-			return ChooseFrom(catcus);
-		case biomeType.City:
-			return ChooseFrom(smallBuildings,biigBuildings);
-		case biomeType.Wagons:
-			return ChooseFrom(wagons);
-		case biomeType.Horses:
-			return ChooseFrom(horses);
-		case biomeType.Mountains:
-			return ChooseFrom(mountains,rocks);
+			prefab= ChooseFrom(trees, catcus,smallBuildings);
 			break;
+		case biomeType.Desert:
+			prefab =ChooseFrom(catcus, smallBuildings);
+			break;
+		case biomeType.City:
+			prefab=ChooseFrom(biigBuildings, trees, catcus);
+			break;
+		case biomeType.Wagons:
+			prefab= ChooseFrom(wagons,trees);
+			break;
+		case biomeType.Horses:
+			prefab= ChooseFrom(horses, wagons);
+			break;
+		case biomeType.Mountains:
+			prefab= ChooseFrom(mountains,rocks);
+			break;
+			
+		
 		default:
 			return null;
 	
 		}
-		return null;
-	}
+		
+		if(prefab==null)
+		{
+			prefab= ChooseFrom(
+				trees,
+				catcus,
+				smallBuildings,
+				biigBuildings,
+				wagons,
+				mountains,
+				rocks
+			);
+		}
+	return prefab;
+		}
 	#endregion
 	#region Obstacles 
 	void SpawnNextObstacles(){}
